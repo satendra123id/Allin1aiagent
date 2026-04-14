@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Content Creator & FB Auto-Poster</title>
+    <style>
+        /* Modern UI Design */
+        :root {
+            --primary-blue: #1877F2;
+            --dark-bg: #1e1e2f;
+            --card-bg: #2a2a40;
+            --text-light: #f4f7f6;
+            --accent: #00e676;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--text-light);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        h1 { text-align: center; color: var(--primary-blue); font-size: 28px; }
+        h2 { color: var(--accent); font-size: 18px; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .input-group { display: flex; flex-direction: column; }
+        label { font-weight: 600; margin-bottom: 8px; font-size: 14px; color: #ccc; }
+        
+        input, textarea {
+            padding: 12px;
+            border: 1px solid #444;
+            background-color: #1e1e2f;
+            color: #fff;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            transition: border 0.3s;
+        }
+        input:focus, textarea:focus { border-color: var(--primary-blue); }
+        textarea { height: 100px; resize: vertical; }
+
+        button {
+            background-color: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            transition: 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover { background-color: #165eab; transform: translateY(-2px); }
+        button:disabled { background-color: #555; cursor: not-allowed; transform: none; }
+        
+        .btn-mic { background-color: #ff3d00; }
+        .btn-mic:hover { background-color: #dd3300; }
+        .btn-save { background-color: #28a745; }
+        .btn-save:hover { background-color: #218838; }
+
+        .flex-row { display: flex; gap: 15px; margin-top: 15px; }
+        
+        .status { margin-top: 15px; padding: 12px; border-radius: 8px; display: none; text-align: center; font-weight: bold; }
+        .success { background-color: rgba(0, 230, 118, 0.2); color: #00e676; display: block; border: 1px solid #00e676; }
+        .error { background-color: rgba(255, 61, 0, 0.2); color: #ff3d00; display: block; border: 1px solid #ff3d00; }
+        
+        /* Advertisement Spaces */
+        .ad-space {
+            width: 100%;
+            max-width: 800px;
+            height: 100px;
+            background-color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            border: 2px dashed #555;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ad-space" id="ad-top">
+        <div>
+            <strong>Top Ad Slot</strong><br>
+            <small>Apna AdSense Script Yahan Paste Karein</small>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>🚀 AI Content & FB Poster</h1>
+        
+        <h2>1. API Keys & Setup (Secure Local Save)</h2>
+        <div class="grid">
+            <div class="input-group">
+                <label>Google Gemini API Key:</label>
+                <input type="password" id="geminiKey" placeholder="Gemini Key paste karein">
+            </div>
+            <div class="input-group">
+                <label>Facebook Page ID:</label>
+                <input type="text" id="fbPageId" placeholder="Page ID dalein">
+            </div>
+            <div class="input-group" style="grid-column: span 2;">
+                <label>Facebook Page Access Token:</label>
+                <input type="password" id="fbToken" placeholder="Page Access Token paste karein">
+            </div>
+        </div>
+        <button class="btn-save" onclick="saveSettings()">💾 Settings Save Karein</button>
+        <div id="saveStatus" class="status"></div>
+
+        <br><br>
+
+        <h2>2. Content Banayein aur Post Karein</h2>
+        <div class="input-group">
+            <label>Aap kis topic par post karna chahte hain?</label>
+            <textarea id="userInput" placeholder="Jaise: Cybersecurity aur hacking se bachne ke tips ke baare mein ek post likho..."></textarea>
+        </div>
+        
+        <div class="flex-row">
+            <button id="micBtn" class="btn-mic" onclick="startVoiceTyping()" style="flex: 1;">🎤 Bolkar Input Dein</button>
+            <button id="postBtn" onclick="generateAndPost()" style="flex: 2;">✨ AI se Likhwayein & FB Par Post Karein</button>
+        </div>
+        
+        <div id="processStatus" class="status"></div>
+    </div>
+
+    <div class="ad-space" id="ad-bottom">
+        <div>
+            <strong>Bottom Ad Slot</strong><br>
+            <small>Apna Banner Ad Yahan Lagayein</small>
+        </div>
+    </div>
+
+    <script>
+        // Page load hote hi purani keys wapas box me dalna
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('geminiKey').value = localStorage.getItem('geminiKey') || '';
+            document.getElementById('fbPageId').value = localStorage.getItem('fbPageId') || '';
+            document.getElementById('fbToken').value = localStorage.getItem('fbToken') || '';
+        });
+
+        // Keys ko browser me secure save karna
+        function saveSettings() {
+            localStorage.setItem('geminiKey', document.getElementById('geminiKey').value.trim());
+            localStorage.setItem('fbPageId', document.getElementById('fbPageId').value.trim());
+            localStorage.setItem('fbToken', document.getElementById('fbToken').value.trim());
+            showMsg('saveStatus', '✅ Settings Securely Saved!', 'success');
+        }
+
+        // Messages dikhane ka function
+        function showMsg(id, msg, type) {
+            const el = document.getElementById(id);
+            el.className = 'status ' + type;
+            el.innerText = msg;
+            setTimeout(() => { el.style.display = 'none'; }, 6000);
+        }
+
+        // Voice Typing (Speech to Text)
+        function startVoiceTyping() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Voice typing aapke browser me support nahi kar rahi. Chrome browser use karein.");
+                return;
+            }
+            
+            const recognition = new SpeechRecognition();
+            recognition.lang = "hi-IN"; // Hindi language support
+            
+            const micBtn = document.getElementById('micBtn');
+            micBtn.innerText = "🔴 Sun raha hoon...";
+            recognition.start();
+
+            recognition.onresult = (event) => {
+                document.getElementById('userInput').value += " " + event.results[0][0].transcript;
+                micBtn.innerText = "🎤 Bolkar Input Dein";
+            };
+
+            recognition.onerror = () => {
+                micBtn.innerText = "🎤 Bolkar Input Dein";
+                alert("Awaz samajh nahi aayi, kripya dobara koshish karein.");
+            };
+        }
+
+        // AI se likhwana aur FB par post karna
+        async function generateAndPost() {
+            const topic = document.getElementById('userInput').value.trim();
+            const geminiKey = localStorage.getItem('geminiKey');
+            const fbPageId = localStorage.getItem('fbPageId');
+            const fbToken = localStorage.getItem('fbToken');
+
+            if (!topic || !geminiKey || !fbPageId || !fbToken) {
+                showMsg('processStatus', '❌ Error: Kripya sabhi Settings aur Topic bharein!', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('postBtn');
+            btn.disabled = true;
+            btn.innerText = "⏳ Processing...";
+
+            try {
+                // STEP 1: Google Gemini AI API Call
+                showMsg('processStatus', '🤖 AI aapke liye post likh raha hai...', 'success');
+                const promptText = `Write an engaging and viral Facebook post in Hinglish about: "${topic}". Make it professional and ready to publish. Add relevant emojis. Do NOT include quotation marks at the start or end.`;
+                
+                const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+                });
+                
+                const aiData = await aiResponse.json();
+                if (aiData.error) throw new Error("AI Error: " + aiData.error.message);
+                
+                const finalPost = aiData.candidates[0].content.parts[0].text;
+
+                // STEP 2: Facebook Graph API Call
+                showMsg('processStatus', '🌐 Facebook par post ho raha hai...', 'success');
+                const fbResponse = await fetch(`https://graph.facebook.com/v19.0/${fbPageId}/feed`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: finalPost,
+                        access_token: fbToken
+                    })
+                });
+
+                const fbData = await fbResponse.json();
+                if (fbData.error) throw new Error("Facebook Error: " + fbData.error.message);
+
+                showMsg('processStatus', '🎉 Success! Post Facebook par live ho gayi hai.', 'success');
+                document.getElementById('userInput').value = ''; // Input box khali karein
+
+            } catch (error) {
+                showMsg('processStatus', `❌ ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "✨ AI se Likhwayein & FB Par Post Karein";
+            }
+        }
+    </script>
+</body>
+</html>
